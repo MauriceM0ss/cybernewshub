@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+{% block title %}CyberNewsHub{% endblock %}
+
+{% block content %}
+<div class="feed-toolbar">
+  <div class="feed-title" id="feed-title">All items<span class="sub" id="feed-sub"></span></div>
+  <input type="search" class="search-box" id="search-box" placeholder="Search articles…">
+  <button class="btn-secondary btn-sm" id="mark-read-btn" data-tip="Mark every article in this section as read" aria-label="Mark every article in this section as read">✓ Mark read</button>
+</div>
+
+<div class="items-list" id="items-list"></div>
+<div class="load-more" id="load-more" hidden>
+  <button class="btn-secondary" id="load-more-btn">Load more</button>
+</div>
+
+<!-- Article preview (reader view) -->
+<div class="modal-backdrop" id="preview-backdrop" hidden>
+  <div class="modal preview-modal" role="dialog" aria-modal="true">
+    <div class="preview-head">
+      <div class="preview-headtext">
+        <h2 class="modal-title preview-title" id="preview-title"></h2>
+        <div class="preview-source" id="preview-source"></div>
+      </div>
+      <div class="preview-headbtns">
+        <button class="btn-icon" id="preview-copy" title="Copy link" aria-label="Copy link">⧉</button>
+        <button class="btn-icon" id="preview-star" title="Star (keep permanently)" aria-label="Star">☆</button>
+        <button class="btn-icon" id="preview-open" title="Open in new tab" aria-label="Open in new tab">↗</button>
+        <button class="btn-icon preview-close" id="preview-close" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+    <div class="preview-body" id="preview-body"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.CURRENT = { scope: 'all', id: null, label: 'All items' };
+let offset = 0;
+let loading = false;
+let searchTerm = '';
+let selectedEl = null;
+
+// "New since last visit" — remember when the app was last opened, then mark the
+// boundary in the list. Capture the previous value at boot, then stamp "now".
+const LAST_VISIT_KEY = 'ctnhub-last-visit';
+const lastVisitAt = localStorage.getItem(LAST_VISIT_KEY);
+localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
+let sawNewItem = false, dividerPlaced = false;
+
+const listEl = document.getElementById('items-list');
+const loadMoreWrap = document.getElementById('load-more');
+
+// ── Watchlist + CVE enrichment ────────────────────────────────────────────────
+window.WATCH_RE = null;
+function buildWatchRe(terms) {
+  // Match against already-escaped HTML, so escape the terms the same way.
+  const parts = (terms || []).filter(Boolean).map(t =>
+    escHtml(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  window.WATCH_RE = parts.length ? new RegExp('(' + parts.join('|') + ')', 'gi') : null;
+}
+async function loadWatchlist(reload) {
+  try {
+    const s = await (await fetch('/api/settings')).json();
+    buildWatchRe(s.watchlist);
+  } catch { /* keep whatever terms we already had */ }
+  if (reload) reloadItems();
+}
+window.reloadWatchlist = () => loadWatchlist(true);
+
+const CVE_RE = /\bCVE-\d{4}-\d{4,}\b/gi;
+function linkifyCVE(s) {
+  return s.replace(CVE_RE, m =>
+    `<a class="cve-link" href="https://nvd.nist.gov/vuln/detail/${m.toUpperCase()}" ` +
+    `target="_blank" rel="noopener">${m.toUpperCase()}</a>`);
+}
+function highlightKeywords(s) {
+  return window.WATCH_RE ? s.replace(window.WATCH_RE, m => `<mark class="kw">${m}</mark>`) : s;
+}
+// Keywords first, then CVE links — keeps keyword <mark> out of CVE href attributes.
+// The title lives inside an <a>, so it only gets highlighting (no nested CVE links).
+const enrichTitle = esc => highlightKeywords(esc);
+const enrichSummary = esc => linkifyCVE(highlightKeywords(esc));
+
+window.selectScope = function (scope, id, label) {
+  window.CURRENT = { scope, id, label };
+  document.getElementById('feed-title').childNodes[0].nodeValue = label;
+  highlightActive();
+  reloadItems();
+  if (window.closeSidebar) window.closeSidebar();    // tuck the drawer away on mobile
+};
+
+function reloadItems() {
+  offset = 0;
+  selectedEl = null;
+  sawNewItem = false; dividerPlaced = false;
+  listEl.innerHTML = '';
+  loadItems();
+}
+
+// Divider marking where "new since last visit" ends (everything above it is new).
+function newDivider() {
+  const d = document.createElement('div');
+  d.className = 'new-divider';
+  d.innerHTML = '<span>↑ New since your last visit</span>';
+  return d;
+}
+window.reloadItems = reloadItems;
+
+async function loadItems() {
+  if (loading) return;
+  loading = true;
+  const c = window.CURRENT;
+  const params = new URLSearchParams({ scope: c.scope, offset });
+  if (c.id != null) params.set('id', c.id);
+  if (searchTerm) params.set('q', searchTerm);
+
+  let data;
+  try {
+    data = await (await fetch('/api/items?' + params)).json();
+  } catch { loading = false; return; }
+
+  if (offset === 0 && !data.items.length) {
+    listEl.innerHTML = emptyState();
+    loadMoreWrap.hidden = true;
+    document.getElementById('feed-sub').textContent = '';
+    loading = false;
+    return;
+  }
+  // Drop a "new since last visit" divider once, at the new→older boundary.
+  // Only in chronological list views (skip search), and only after a prior visit.
+  const markNew = !searchTerm && lastVisitAt;
+  data.items.forEach(it => {
+    if (markNew && !dividerPlaced) {
+      const eff = it.published || it.fetched_at;
+      const isNew = eff && new Date(eff) > new Date(lastVisitAt);
+      if (isNew) sawNewItem = true;
+      else if (sawNewItem) { listEl.appendChild(newDivider()); dividerPlaced = true; }
+    }
+    listEl.appendChild(renderArticle(it));
+  });
+  offset += data.items.length;
+  loadMoreWrap.hidden = !data.has_more;
+  document.getElementById('feed-sub').textContent =
+    `${offset}${data.has_more ? '+' : ''} article${offset === 1 ? '' : 's'}`;
+  loading = false;
+}
+
+function emptyState() {
+  const c = window.CURRENT;
+  if (c.scope === 'starred')
+    return `<div class="empty-state"><div class="empty-icon">★</div>
+      <div class="empty-title">Nothing starred yet</div>
+      <div class="empty-sub">Tap the ★ on any article to keep it here.</div></div>`;
+  if (c.scope === 'read_later')
+    return `<div class="empty-state"><div class="empty-icon">🔖</div>
+      <div class="empty-title">Nothing saved to read later</div>
+      <div class="empty-sub">Tap the 🔖 on any article to bookmark it for later.</div></div>`;
+  if (c.scope === 'flagged')
+    return `<div class="empty-state"><div class="empty-icon">👁</div>
+      <div class="empty-title">No flagged articles</div>
+      <div class="empty-sub">Articles matching your watchlist keywords show up here.
+        Add keywords in ⚙ Settings → Preferences → Watchlist.</div></div>`;
+  if (searchTerm)
+    return `<div class="empty-state"><div class="empty-icon">🔍</div>
+      <div class="empty-title">No matches</div>
+      <div class="empty-sub">Nothing matches "${escHtml(searchTerm)}" in this view.</div></div>`;
+  return `<div class="empty-state"><div class="empty-icon">📡</div>
+    <div class="empty-title">No articles yet</div>
+    <div class="empty-sub">Add a source from ⚙ settings, then hit Refresh to pull the latest.</div></div>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 3600) return Math.max(1, Math.round(diff / 60)) + 'm ago';
+  if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.round(diff / 86400) + 'd ago';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderArticle(it) {
+  const el = document.createElement('article');
+  el.dataset.id = it.id;
+
+  const isVideo = it.feed_type === 'youtube';
+  const thumb = it.thumbnail
+    ? `<div class="article-thumb${isVideo ? ' is-video' : ''}"><img loading="lazy" src="${escHtml(it.thumbnail)}" alt=""></div>`
+    : `<div class="article-thumb${isVideo ? ' is-video' : ''}"><span class="article-thumb-ph">${isVideo ? '📺' : '📰'}</span></div>`;
+
+  const titleHtml = enrichTitle(escHtml(it.title));
+  const summaryHtml = it.summary ? enrichSummary(escHtml(it.summary)) : '';
+  const watched = titleHtml.includes('<mark') || summaryHtml.includes('<mark');
+  el.className = 'article' + (it.read ? ' is-read' : '') + (watched ? ' has-watch' : '');
+
+  el.innerHTML =
+    `${thumb}
+     <div class="article-body">
+       <a class="article-headline" href="${escHtml(it.url)}" target="_blank" rel="noopener">${titleHtml}</a>
+       ${summaryHtml ? `<div class="article-summary">${summaryHtml}</div>` : ''}
+       <div class="article-meta">
+         ${watched ? '<span class="watch-flag" title="Matches your watchlist">👁</span>' : ''}
+         <span class="article-source">${escHtml(it.feed_title)}</span>
+         ${it.author ? `<span class="meta-sep">·</span><span>${escHtml(it.author)}</span>` : ''}
+         ${it.published || it.fetched_at ? `<span class="meta-sep">·</span><span>${fmtDate(it.published || it.fetched_at)}</span>` : ''}
+         <span class="cat-pill">${escHtml(it.category_name)} ▸ ${escHtml(it.subject_name)}</span>
+       </div>
+     </div>
+     <div class="article-actions">
+       <button class="act-btn star-btn${it.starred ? ' starred' : ''}" title="Star (keep permanently)">${it.starred ? '★' : '☆'}</button>
+       <button class="act-btn later-btn${it.read_later ? ' later' : ''}" title="Read later">🔖</button>
+       <button class="act-btn is-read-toggle${it.read ? ' read' : ''}" title="Toggle read">${it.read ? '✓' : '○'}</button>
+     </div>`;
+
+  // Headline → reader-view preview. Videos and ctrl/⌘/middle-click open a real tab.
+  el.querySelector('.article-headline').addEventListener('click', ev => {
+    if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button === 1) { setRead(it, true, el); return; }
+    ev.preventDefault();
+    if (isVideo) { window.open(it.url, '_blank', 'noopener'); setRead(it, true, el); }
+    else openPreview(it, el);
+  });
+  if (isVideo && it.thumbnail)
+    el.querySelector('.article-thumb').addEventListener('click', () => {
+      window.open(it.url, '_blank', 'noopener'); setRead(it, true, el);
+    });
+
+  el.querySelector('.star-btn').addEventListener('click', ev => {
+    ev.stopPropagation();
+    setStar(it, !it.starred, el);
+  });
+
+  el.querySelector('.later-btn').addEventListener('click', async ev => {
+    ev.stopPropagation();
+    const want = !it.read_later;
+    const b = ev.currentTarget;   // capture before await — currentTarget is null afterwards
+    await fetch(`/api/items/${it.id}/read-later`, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read_later: want }) });
+    it.read_later = want;
+    b.classList.toggle('later', want);
+    loadTree();
+  });
+
+  el.querySelector('.is-read-toggle').addEventListener('click', ev => {
+    ev.stopPropagation(); setRead(it, !it.read, el);
+  });
+  return el;
+}
+
+async function setRead(it, read, el) {
+  if (it.read === read) return;
+  await fetch(`/api/items/${it.id}/read`, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read }) });
+  it.read = read;
+  el.classList.toggle('is-read', read);
+  const b = el.querySelector('.is-read-toggle');
+  b.classList.toggle('read', read); b.textContent = read ? '✓' : '○';
+  loadTree();
+}
+
+// Toggle starred state and keep the list row's star button (if present) in sync.
+async function setStar(it, want, listEl) {
+  await fetch(`/api/items/${it.id}/star`, { method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ starred: want }) });
+  it.starred = want;
+  const lb = listEl && listEl.querySelector('.star-btn');
+  if (lb) { lb.classList.toggle('starred', want); lb.textContent = want ? '★' : '☆'; }
+  loadTree();
+}
+
+// Copy a URL to the clipboard, with a fallback for non-secure (http) contexts,
+// and flash a ✓ on the button to confirm.
+async function copyLink(url, btn) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url); ok = true;
+    } else throw new Error('insecure');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    document.body.removeChild(ta);
+  }
+  if (btn) {
+    const old = btn.textContent;
+    btn.textContent = ok ? '✓' : '✕';
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  }
+}
+
+// ── Article preview (reader view) ─────────────────────────────────────────────
+const previewBackdrop = document.getElementById('preview-backdrop');
+const previewBody = document.getElementById('preview-body');
+const previewStar = document.getElementById('preview-star');
+const previewCopy = document.getElementById('preview-copy');
+let previewReq = 0;
+
+function renderPreviewStar(it) {
+  previewStar.textContent = it.starred ? '★' : '☆';
+  previewStar.classList.toggle('starred', !!it.starred);
+}
+
+async function openPreview(it, el) {
+  setRead(it, true, el);
+  const req = ++previewReq;                       // guard against out-of-order loads
+  document.getElementById('preview-title').textContent = it.title;
+  document.getElementById('preview-source').textContent =
+    `${it.feed_title}${it.published || it.fetched_at ? ' · ' + fmtDate(it.published || it.fetched_at) : ''}`;
+  document.getElementById('preview-open').onclick = () => window.open(it.url, '_blank', 'noopener');
+  previewCopy.onclick = () => copyLink(it.url, previewCopy);
+  renderPreviewStar(it);
+  previewStar.onclick = async () => { await setStar(it, !it.starred, el); renderPreviewStar(it); };
+  previewBody.innerHTML = '<div class="preview-status">Loading preview…</div>';
+  previewBody.scrollTop = 0;
+  previewBackdrop.hidden = false;
+  try {
+    const d = await (await fetch(`/api/items/${it.id}/preview`)).json();
+    if (req !== previewReq) return;               // a newer preview opened meanwhile
+    if (d.ok) {
+      previewBody.innerHTML = `<div class="preview-article">${d.html}</div>`;
+    } else {
+      previewBody.innerHTML =
+        `<div class="preview-status">${escHtml(d.error || 'Preview unavailable.')}` +
+        `<br><br>Use “Open in new tab” to read it on the original site.</div>`;
+    }
+  } catch (e) {
+    if (req !== previewReq) return;
+    previewBody.innerHTML =
+      '<div class="preview-status">Preview failed to load.' +
+      '<br><br>Use “Open in new tab” to read it on the original site.</div>';
+  }
+  previewBody.scrollTop = 0;
+}
+
+function closePreview() { previewBackdrop.hidden = true; previewBody.innerHTML = ''; }
+document.getElementById('preview-close').addEventListener('click', closePreview);
+previewBackdrop.addEventListener('click', ev => { if (ev.target === previewBackdrop) closePreview(); });
+
+// Search (debounced)
+let searchTimer = null;
+document.getElementById('search-box').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { searchTerm = e.target.value.trim(); reloadItems(); }, 300);
+});
+
+// Mark everything in the current view as read
+document.getElementById('mark-read-btn').addEventListener('click', async () => {
+  const c = window.CURRENT;
+  await fetch('/api/mark-read', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope: c.scope, id: c.id }) });
+  await loadTree();
+  reloadItems();
+});
+
+// Infinite-ish scroll: load more when near the bottom of the main pane.
+document.querySelector('.app-main').addEventListener('scroll', e => {
+  const m = e.target;
+  if (!loadMoreWrap.hidden && m.scrollTop + m.clientHeight > m.scrollHeight - 300) loadItems();
+});
+document.getElementById('load-more-btn').addEventListener('click', loadItems);
+
+// ── Keyboard shortcuts (j/k navigate, s star, m/r read, o open, / search) ─────
+function selectArticle(el) {
+  if (!el) return;
+  if (selectedEl) selectedEl.classList.remove('selected');
+  selectedEl = el;
+  el.classList.add('selected');
+  el.scrollIntoView({ block: 'nearest' });
+}
+
+async function moveSelection(dir) {
+  let arts = [...listEl.querySelectorAll('.article')];
+  if (!arts.length) return;
+  const idx = selectedEl ? arts.indexOf(selectedEl) : (dir > 0 ? -1 : 0);
+  let next = idx + dir;
+  if (next >= arts.length && !loadMoreWrap.hidden) {   // pull the next page, then advance
+    await loadItems();
+    arts = [...listEl.querySelectorAll('.article')];
+  }
+  next = Math.max(0, Math.min(next, arts.length - 1));
+  selectArticle(arts[next]);
+}
+
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const openModal = [...document.querySelectorAll('.modal-backdrop')].find(m => !m.hidden);
+  if (openModal) {                                      // a dialog is open
+    if (e.key === 'Escape') openModal.hidden = true;
+    return;
+  }
+  const click = sel => { if (selectedEl) { e.preventDefault(); selectedEl.querySelector(sel).click(); } };
+  switch (e.key) {
+    case 'j': e.preventDefault(); moveSelection(1); break;
+    case 'k': e.preventDefault(); moveSelection(-1); break;
+    case 's': click('.star-btn'); break;
+    case 'b': click('.later-btn'); break;
+    case 'm': case 'r': click('.is-read-toggle'); break;
+    case 'o': case 'Enter': click('.article-headline'); break;
+    case '/': e.preventDefault(); document.getElementById('search-box').focus(); break;
+  }
+});
+
+// Boot
+loadTree();
+loadWatchlist(false).then(loadItems);
+</script>
+{% endblock %}

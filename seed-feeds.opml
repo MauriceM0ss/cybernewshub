@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>CyberNewsHub seed feeds</title>
+  </head>
+  <body>
+    <outline text="Cybersecurity">
+      <outline text="Threat Intel &amp; News">
+        <outline type="rss" text="Bleepingcomputer" xmlUrl="https://www.bleepingcomputer.com/feed/" />
+        <outline type="rss" text="The Hacker News" xmlUrl="https://feeds.feedburner.com/TheHackersNews" />
+        <outline type="rss" text="Krebs on Security" xmlUrl="https://krebsonsecurity.com/feed/" />
+        <outline type="rss" text="Darkreading.com" xmlUrl="https://www.darkreading.com/rss.xml" />
+        <outline type="rss" text="SecurityWeek" xmlUrl="https://www.securityweek.com/feed/" />
+        <outline type="rss" text="Hackread" xmlUrl="https://hackread.com/feed/" />
+        <outline type="rss" text="IT Security Guru" xmlUrl="https://www.itsecurityguru.org/feed/" />
+        <outline type="rss" text="CyberDefense Magazine" xmlUrl="https://www.cyberdefensemagazine.com/feed/" />
+        <outline type="rss" text="CSO Online" xmlUrl="https://www.csoonline.com/feed/" />
+      </outline>
+      <outline text="Advisories &amp; Government">
+        <outline type="rss" text="CISA Advisories" xmlUrl="https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml" />
+        <outline type="rss" text="NCSC NL" xmlUrl="https://feeds.ncsc.nl/nieuws.rss" />
+        <outline type="rss" text="NIST" xmlUrl="https://www.nist.gov/blogs/cybersecurity-insights/rss.xml" />
+        <outline type="rss" text="Security.nl" xmlUrl="https://www.security.nl/rss/headlines.xml" />
+      </outline>
+      <outline text="Vendor Blogs">
+        <outline type="rss" text="AWS Security Blog" xmlUrl="https://aws.amazon.com/blogs/security/feed/" />
+        <outline type="rss" text="Microsoft Security Blog" xmlUrl="https://www.microsoft.com/en-us/security/blog/feed/" />
+        <outline type="rss" text="MalwareBytes" xmlUrl="https://www.malwarebytes.com/blog/feed/index.xml" />
+        <outline type="rss" text="HackTheBox" xmlUrl="https://www.hackthebox.com/rss/blog/all" />
+      </outline>
+    </outline>
+    <outline text="AI &amp; Research">
+      <outline text="Research">
+        <outline type="rss" text="arXiv cs.AI" xmlUrl="https://rss.arxiv.org/rss/cs.AI" />
+        <outline type="rss" text="HuggingFace" xmlUrl="https://huggingface.co/blog/feed.xml" />
+        <outline type="rss" text="MIT AI Tech" xmlUrl="https://www.technologyreview.com/topic/artificial-intelligence/feed/" />
+      </outline>
+    </outline>
+    <outline text="Tech News">
+      <outline text="General">
+        <outline type="rss" text="Wired" xmlUrl="https://www.wired.com/feed/rss" />
+        <outline type="rss" text="The Register" xmlUrl="https://api.theregister.com/api/v1/article?orderBy=published&amp;site_id=2&amp;remapper=rss&amp;query=tag:security" />
+        <outline type="rss" text="Tweakers.net" xmlUrl="https://tweakers.net/feeds/nieuws.xml" />
+      </outline>
+    </outline>
+  </body>
+</opml>

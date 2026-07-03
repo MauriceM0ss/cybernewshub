@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}CyberNewsHub{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <!-- Apply the saved theme before the stylesheet paints, to avoid a flash. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('ctnhub-theme') || 'neon';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'neon'); }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- PWA: installable, themed, home-screen icon -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
+  <meta name="theme-color" content="#07090b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CyberNewsHub">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="btn-icon btn-menu" id="btn-menu" aria-label="Toggle feed menu">☰</button>
+      <a href="/" class="logo">
+        <span class="logo-text">CyberNewsHub</span>
+      </a>
+    </div>
+    <span class="header-title">Cybersecurity News</span>
+    <div class="header-actions">
+      <button class="btn-icon" id="btn-refresh" data-tip="Refresh all feeds now" aria-label="Refresh all feeds now"><span id="refresh-glyph">⟳</span></button>
+      <button class="btn-icon" id="btn-brief" data-tip="AI daily brief" aria-label="AI daily brief">✦</button>
+      <button class="btn-icon" id="btn-help" data-tip="Keyboard shortcuts &amp; help" aria-label="Keyboard shortcuts and help">?</button>
+      <button class="btn-icon" id="btn-settings" data-tip="Feeds &amp; settings" aria-label="Feeds and settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- ── Settings modal ─────────────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="settings-backdrop" hidden>
+    <div class="modal settings-modal" role="dialog" aria-modal="true">
+      <h2 class="modal-title">Feeds &amp; settings</h2>
+
+      <div class="settings-tabs" role="tablist">
+        <button class="settings-tab is-active" data-tab="sources" role="tab">Sources</button>
+        <button class="settings-tab" data-tab="prefs" role="tab">Preferences</button>
+        <button class="settings-tab" data-tab="health" role="tab">Health</button>
+        <button class="settings-tab" data-tab="data" role="tab">Data</button>
+      </div>
+
+      <!-- ── Tab: Sources ─────────────────────────────────────────────────── -->
+      <div class="settings-panel" data-panel="sources">
+
+      <!-- Add a feed -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Add a source</h3>
+        <p class="settings-desc">Paste an RSS/Atom feed, a website (I'll sniff for a feed), or a YouTube
+          channel/video URL.</p>
+        <div class="addfeed-row">
+          <input type="text" id="addfeed-url" class="modal-input" placeholder="https://… or youtube.com/@channel">
+          <button class="btn-secondary" id="addfeed-detect">Detect</button>
+        </div>
+        <div class="addfeed-detail" id="addfeed-detail" hidden>
+          <span class="detected-type" id="addfeed-type"></span>
+          <label class="field">Title
+            <input type="text" id="addfeed-title" class="modal-input">
+          </label>
+          <label class="field">Place under
+            <select id="addfeed-subject" class="modal-input"></select>
+          </label>
+          <div class="import-row">
+            <button class="btn-primary" id="addfeed-add">Add feed</button>
+          </div>
+        </div>
+        <p id="addfeed-error" class="modal-error" hidden></p>
+      </div>
+
+      <!-- Manage -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Categories, subjects &amp; feeds</h3>
+        <div id="manage-list"></div>
+        <div class="addfeed-row">
+          <input type="text" id="newcat-name" class="modal-input" placeholder="New category name">
+          <button class="btn-secondary" id="newcat-add">Add category</button>
+        </div>
+      </div>
+
+      </div><!-- /Tab: Sources -->
+
+      <!-- ── Tab: Preferences ─────────────────────────────────────────────── -->
+      <div class="settings-panel" data-panel="prefs" hidden>
+
+      <!-- Appearance -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Appearance</h3>
+        <label class="field">Theme
+          <select id="theme-select" class="modal-input">
+            <option value="neon">Neon — dark terminal</option>
+            <option value="blue">Classic — deep blue</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <p class="settings-desc">Switches the colour scheme instantly. Your choice is remembered in this
+          browser.</p>
+      </div>
+
+      <!-- YouTube -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">YouTube</h3>
+        <label class="toggle-row">
+          <input type="checkbox" id="hide-shorts-cb">
+          <span>Hide YouTube Shorts</span>
+        </label>
+        <p class="settings-desc">Shorts are detected automatically and filtered from every view.
+          Newly added channels are classified within a minute of being added.</p>
+      </div>
+
+      <!-- Auto-refresh -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Auto-refresh</h3>
+        <label class="field">Check feeds for new articles every
+          <select id="refresh-interval" class="modal-input">
+            <option value="10">10 minutes</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </label>
+        <p class="settings-desc">A change takes effect within a minute. Use the ⟳ Refresh button in the
+          header to pull updates right away.</p>
+      </div>
+
+      <!-- Watchlist -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Watchlist</h3>
+        <p class="settings-desc">One term per line. Matches are highlighted in article titles and summaries,
+          and flagged with a 👁 marker. CVE IDs are linked automatically.</p>
+        <textarea id="watchlist-input" class="modal-input" rows="4"
+                  placeholder="ransomware&#10;Fortinet&#10;zero-day"></textarea>
+        <div class="import-row" style="margin-top:6px">
+          <button class="btn-secondary btn-sm" id="watchlist-save">Save watchlist</button>
+          <span id="watchlist-status" class="settings-status"></span>
+        </div>
+        <label class="toggle-row" style="margin-top:12px">
+          <input type="checkbox" id="notify-cb">
+          <span>Desktop notifications for watchlist hits</span>
+        </label>
+        <p class="settings-desc">Pop a desktop notification when a refresh finds new articles matching your
+          watchlist. Works while CyberNewsHub is open in a browser tab; your browser will ask permission once.
+          <span id="notify-status" class="settings-status"></span></p>
+      </div>
+
+      <!-- AI Daily Brief -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">AI Daily Brief</h3>
+        <p class="settings-desc">Generate a once-a-day summary of what matters across your feeds using the
+          Claude API (the ✦ button in the header). Your key is stored locally on the server, never sent to
+          the browser, and never committed to git.</p>
+        <div class="addfeed-row">
+          <input type="password" id="api-key-input" class="modal-input" placeholder="sk-ant-…" autocomplete="off">
+          <button class="btn-secondary" id="api-key-save">Save key</button>
+        </div>
+        <p class="settings-desc">
+          <span id="api-key-status" class="settings-status"></span>
+          <button class="btn-xs btn-danger-xs" id="api-key-clear" hidden>Remove key</button>
+        </p>
+      </div>
+
+      </div><!-- /Tab: Preferences -->
+
+      <!-- ── Tab: Health ──────────────────────────────────────────────────── -->
+      <div class="settings-panel" data-panel="health" hidden>
+        <div class="settings-section">
+          <div class="health-head">
+            <h3 class="settings-section-title">Feed health</h3>
+            <button class="btn-xs" id="health-refresh">↻ Reload</button>
+          </div>
+          <p class="settings-desc" id="health-summary">Loading…</p>
+          <div id="health-list" class="health-list"></div>
+        </div>
+      </div><!-- /Tab: Health -->
+
+      <!-- ── Tab: Data ────────────────────────────────────────────────────── -->
+      <div class="settings-panel" data-panel="data" hidden>
+
+      <!-- OPML -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Import / export OPML</h3>
+        <div class="import-row">
+          <label class="btn-secondary">Import OPML…
+            <input type="file" id="opml-file" accept=".opml,.xml" hidden>
+          </label>
+          <a class="btn-secondary" href="{{ url_for('api_opml_export') }}">⬇ Export OPML</a>
+          <span id="opml-status" class="settings-status"></span>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="settings-section settings-section--danger">
+        <h3 class="settings-section-title">Reset</h3>
+        <p class="settings-desc">Delete every category, feed and saved article. Cannot be undone.</p>
+        <button class="btn-danger-sm" id="reset-open">Reset everything…</button>
+        <div id="reset-confirm" hidden>
+          <p class="settings-desc">Type <strong>RESET</strong> to confirm:</p>
+          <div class="import-row" style="margin-top:6px">
+            <input type="text" id="reset-input" class="modal-input" placeholder="RESET" style="max-width:140px">
+            <button class="btn-danger-sm" id="reset-go">Delete everything</button>
+          </div>
+          <span id="reset-status" class="settings-status"></span>
+        </div>
+      </div>
+
+      </div><!-- /Tab: Data -->
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="settings-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Daily Brief modal ──────────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="brief-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2 class="modal-title">✦ Daily Brief</h2>
+      <p class="settings-desc" id="brief-status">Loading…</p>
+      <div id="brief-content" class="brief-content"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="brief-generate" hidden>Generate</button>
+        <button class="btn-secondary" id="brief-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Feed diagnostic modal ──────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="diag-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2 class="modal-title">⚠ Feed problem</h2>
+      <p class="settings-desc" id="diag-feed"></p>
+      <pre class="diag-error" id="diag-error"></pre>
+      <p class="settings-desc" id="diag-meta"></p>
+      <p class="diag-hint" id="diag-hint"></p>
+      <div class="modal-actions">
+        <button class="btn-primary" id="diag-retry">Retry now</button>
+        <button class="btn-secondary" id="diag-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Help modal ─────────────────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="help-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2 class="modal-title">Help &amp; keyboard shortcuts</h2>
+
+      <div class="settings-section">
+        <h3 class="settings-section-title">Keyboard shortcuts</h3>
+        <p class="settings-desc">Work anywhere in the article list (not while typing in a field or with a
+          dialog open).</p>
+        <dl class="shortcut-list">
+          <div class="shortcut"><dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Next / previous article</dd></div>
+          <div class="shortcut"><dt><kbd>o</kbd> / <kbd>Enter</kbd></dt><dd>Open the selected article (marks it read)</dd></div>
+          <div class="shortcut"><dt><kbd>s</kbd></dt><dd>Star / unstar (keep permanently)</dd></div>
+          <div class="shortcut"><dt><kbd>b</kbd></dt><dd>Bookmark to read later</dd></div>
+          <div class="shortcut"><dt><kbd>m</kbd> / <kbd>r</kbd></dt><dd>Toggle read / unread</dd></div>
+          <div class="shortcut"><dt><kbd>/</kbd></dt><dd>Jump to search</dd></div>
+          <div class="shortcut"><dt><kbd>Esc</kbd></dt><dd>Leave the search box</dd></div>
+        </dl>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-section-title">Good to know</h3>
+        <ul class="help-points">
+          <li><strong>⟳ Refresh</strong> pulls every feed right away; feeds also auto-refresh on the
+            interval set in ⚙ Settings.</li>
+          <li><strong>Watchlist</strong> terms (⚙ Settings) are highlighted in articles and flagged with 👁;
+            enable desktop notifications there to be alerted on new matches.</li>
+          <li><strong>★ Starred</strong> keeps an article permanently; <strong>🔖 Read later</strong> bookmarks it
+            for soon — both have their own views in the sidebar and survive cleanup.</li>
+          <li><strong>CVE IDs</strong> in article summaries link straight to the NVD entry.</li>
+          <li><strong>✦ Daily Brief</strong> summarises the last 24 hours across your feeds with the Claude API
+            — add an API key under ⚙ Settings to enable it.</li>
+          <li>Add feeds, manage categories, import/export OPML and more under ⚙ Settings.</li>
+        </ul>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="help-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── App body ───────────────────────────────────────────────────────── -->
+  <div class="app-body">
+    <div class="nav-backdrop" id="nav-backdrop" hidden></div>
+    <nav class="nav-sidebar" id="nav-sidebar" aria-label="Feeds">
+      <div class="nav-quick" id="nav-quick"></div>
+      <div class="nav-tree" id="nav-tree"><span class="nav-tree-loading">Loading…</span></div>
+    </nav>
+    <main class="app-main">{% block content %}{% endblock %}</main>
+  </div>
+
+  <!-- ── Status bar ─────────────────────────────────────────────────────────── -->
+  <footer class="app-statusbar">
+    <span class="status-item" id="status-refresh" title="When the feeds were last fetched">
+      <span class="status-dot"></span><span id="status-refresh-text">Last refreshed: —</span>
+    </span>
+  </footer>
+
+  <script>
+  // selectScope/loadItems live in the page block; the tree calls window.selectScope.
+  let TREE = { tree: [], totals: { all: 0, unread: 0, starred: 0 } };
+  const COLLAPSE_KEY = 'ctnhub-collapsed';
+  let collapsed = new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]'));
+
+  // ── Theme switching ──────────────────────────────────────────────────────
+  // The <head> applies the saved theme before paint; here we keep the picker in
+  // sync, persist changes, and match the browser/PWA chrome colour to the theme.
+  const THEME_KEY = 'ctnhub-theme';
+  const THEME_BG = { neon: '#07090b', blue: '#05070e', light: '#eef1f6' };
+  function currentTheme() { return localStorage.getItem(THEME_KEY) || 'neon'; }
+  function applyTheme(t) {
+    if (!THEME_BG[t]) t = 'neon';
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', THEME_BG[t]);
+    const sel = document.getElementById('theme-select');
+    if (sel) sel.value = t;
+  }
+  applyTheme(currentTheme());   // sync the picker + theme-color on load
+  document.getElementById('theme-select')
+    .addEventListener('change', e => applyTheme(e.target.value));
+
+  // ── Themed dialogs ───────────────────────────────────────────────────────
+  // Promise-based, theme-styled replacements for window.confirm/prompt/alert.
+  // Resolve with: confirm → boolean, prompt → string|null, alert → undefined.
+  // Built from the existing .modal styles and stacked above the settings modal.
+  function appDialog(o) {
+    o = Object.assign({ kind: 'confirm', title: '', message: '', confirmLabel: 'OK',
+      cancelLabel: 'Cancel', danger: false, defaultValue: '', placeholder: '' }, o);
+    const cancelVal = o.kind === 'prompt' ? null : (o.kind === 'alert' ? undefined : false);
+    return new Promise(resolve => {
+      const prevFocus = document.activeElement;
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop app-dialog-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal app-dialog';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+
+      if (o.title) {
+        const h = document.createElement('h2');
+        h.className = 'modal-title'; h.textContent = o.title;
+        modal.appendChild(h);
+      }
+      if (o.message) {
+        const p = document.createElement('p');
+        p.className = 'app-dialog-msg'; p.textContent = o.message;
+        modal.appendChild(p);
+      }
+
+      let input = null;
+      const finish = val => {
+        document.removeEventListener('keydown', onKey, true);
+        backdrop.remove();
+        if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (e) {} }
+        resolve(val);
+      };
+
+      if (o.kind === 'prompt') {
+        input = document.createElement('input');
+        input.type = 'text'; input.className = 'modal-input';
+        input.value = o.defaultValue; input.placeholder = o.placeholder;
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(input.value); } });
+        modal.appendChild(input);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'modal-actions';
+      let cancelBtn = null;
+      if (o.kind !== 'alert') {
+        cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button'; cancelBtn.className = 'btn-secondary';
+        cancelBtn.textContent = o.cancelLabel;
+        cancelBtn.addEventListener('click', () => finish(cancelVal));
+        actions.appendChild(cancelBtn);
+      }
+      const okBtn = document.createElement('button');
+      okBtn.type = 'button';
+      okBtn.className = o.danger ? 'btn-danger-sm' : 'btn-primary';
+      okBtn.textContent = o.confirmLabel;
+      okBtn.addEventListener('click', () => finish(o.kind === 'prompt' ? input.value : (o.kind === 'alert' ? undefined : true)));
+      actions.appendChild(okBtn);
+      modal.appendChild(actions);
+      backdrop.appendChild(modal);
+
+      backdrop.addEventListener('mousedown', e => { if (e.target === backdrop) finish(cancelVal); });
+      // Capture phase + stopImmediatePropagation so Escape dismisses only this
+      // dialog, not the Settings modal stacked underneath (feed.html closes any
+      // open .modal-backdrop on Escape).
+      const onKey = e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finish(cancelVal); }
+      };
+      document.addEventListener('keydown', onKey, true);
+
+      document.body.appendChild(backdrop);
+      // Focus the input for prompts; for a destructive confirm, focus Cancel so a
+      // stray Enter/Space doesn't delete; otherwise focus the primary button.
+      (input || (o.danger && cancelBtn) || okBtn).focus();
+      if (input) input.select();
+    });
+  }
+  const confirmDialog = o => appDialog(Object.assign({ kind: 'confirm', title: 'Confirm', confirmLabel: 'Confirm' }, o));
+  const promptDialog  = o => appDialog(Object.assign({ kind: 'prompt', confirmLabel: 'Save' }, o));
+  const alertDialog   = o => appDialog(Object.assign({ kind: 'alert', title: 'Notice', confirmLabel: 'OK' }, o));
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  const typeIcon = t => t === 'youtube' ? '📺' : '📰';
+
+  // Swap a broken favicon <img> for the generic type glyph.
+  window.favError = function (img, glyph) {
+    const s = document.createElement('span');
+    s.className = 'feed-type-icon';
+    s.textContent = glyph;
+    img.replaceWith(s);
+  };
+
+  // ── PWA service worker ───────────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+
+  // ── Sidebar toggle: drawer on mobile, collapse on desktop ────────────────────
+  const sidebarEl = document.getElementById('nav-sidebar');
+  const navBackdrop = document.getElementById('nav-backdrop');
+  const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
+
+  function openSidebar() { sidebarEl.classList.add('open'); navBackdrop.hidden = false; }
+  window.closeSidebar = function () { sidebarEl.classList.remove('open'); navBackdrop.hidden = true; };
+
+  document.getElementById('btn-menu').addEventListener('click', () => {
+    if (isMobile()) {                                  // narrow: slide the drawer in / out
+      sidebarEl.classList.contains('open') ? window.closeSidebar() : openSidebar();
+    } else {                                           // wide: collapse the sidebar for more reading room
+      document.body.classList.toggle('nav-collapsed');
+    }
+  });
+  navBackdrop.addEventListener('click', window.closeSidebar);
+
+  // Returning to a wide viewport: drop any leftover mobile-drawer state so it can't
+  // linger as a half-open menu (the bug where a desktop click only showed after resizing).
+  window.addEventListener('resize', () => { if (!isMobile()) window.closeSidebar(); });
+
+  // ── Sidebar tree ────────────────────────────────────────────────────────────
+  async function loadTree() {
+    try {
+      TREE = await (await fetch('/api/tree')).json();
+    } catch { return; }
+    renderQuick();
+    renderTree();
+  }
+
+  function renderQuick() {
+    const q = document.getElementById('nav-quick');
+    const t = TREE.totals;
+    const links = [
+      { scope: 'all', icon: '🗞', label: 'All items', count: t.all },
+      { scope: 'unread', icon: '●', label: 'Unread', count: t.unread },
+      { scope: 'starred', icon: '★', label: 'Starred', count: t.starred },
+      { scope: 'read_later', icon: '🔖', label: 'Read later', count: t.read_later },
+      { scope: 'flagged', icon: '👁', label: 'Flagged', count: t.flagged },
+    ];
+    q.innerHTML = '';
+    links.forEach(l => {
+      const el = document.createElement('div');
+      el.className = 'quick-link';
+      el.dataset.scope = l.scope;
+      el.innerHTML = `<span class="q-icon">${l.icon}</span><span>${l.label}</span>` +
+                     `<span class="q-count">${l.count}</span>`;
+      el.addEventListener('click', () => window.selectScope(l.scope, null, l.label));
+      q.appendChild(el);
+    });
+  }
+
+  function renderTree() {
+    const treeEl = document.getElementById('nav-tree');
+    treeEl.innerHTML = '';
+    const ul = document.createElement('ul');
+    ul.className = 'tree-list';
+
+    for (const cat of TREE.tree) {
+      const open = !collapsed.has('c' + cat.id);
+      const catLi = document.createElement('li');
+      catLi.className = 'tree-cat-item';
+
+      const row = document.createElement('div');
+      row.className = 'tree-cat-row';
+      row.dataset.scope = 'category'; row.dataset.id = cat.id;
+      row.innerHTML =
+        `<span class="tree-arrow">${open ? '▾' : '▶'}</span>
+         <span class="tree-cat-label">${escHtml(cat.name)}</span>
+         ${cat.unread ? `<span class="tree-count">${cat.unread}</span>` : ''}`;
+      catLi.appendChild(row);
+
+      const subUl = document.createElement('ul');
+      subUl.className = 'tree-items-list';
+      if (!open) subUl.hidden = true;
+
+      for (const sub of cat.subjects) {
+        const subOpen = !collapsed.has('s' + sub.id);
+        const hasFeeds = sub.feeds.length > 0;
+        const subLi = document.createElement('li');
+
+        const subRow = document.createElement('div');
+        subRow.className = 'tree-item-link tree-sub-row';
+        subRow.dataset.scope = 'subject'; subRow.dataset.id = sub.id;
+        subRow.innerHTML =
+          `<span class="tree-arrow sub-arrow">${hasFeeds ? (subOpen ? '▾' : '▶') : '·'}</span>
+           <span class="feed-name" style="font-weight:600">${escHtml(sub.name)}</span>
+           ${sub.unread ? `<span class="q-count">${sub.unread}</span>` : ''}`;
+        subLi.appendChild(subRow);
+
+        const feedUl = document.createElement('ul');
+        feedUl.className = 'tree-items-list tree-feeds-list';
+        if (!subOpen) feedUl.hidden = true;
+        for (const f of sub.feeds) {
+          const fl = document.createElement('div');
+          fl.className = 'tree-item-link tree-feed-row';
+          fl.dataset.scope = 'feed'; fl.dataset.id = f.id;
+          fl.title = f.last_error || f.title;
+          const icon = f.favicon
+            ? `<img class="feed-favicon" src="${escHtml(f.favicon)}" alt="" loading="lazy"
+                    onerror="favError(this, '${typeIcon(f.type)}')">`
+            : `<span class="feed-type-icon">${typeIcon(f.type)}</span>`;
+          fl.innerHTML =
+            `${icon}
+             <span class="feed-name">${escHtml(f.title)}</span>
+             ${f.last_error ? '<span class="feed-err" title="Feed problem — click for details">⚠</span>' : ''}
+             ${f.unread ? `<span class="q-count">${f.unread}</span>` : ''}`;
+          fl.addEventListener('click', () => window.selectScope('feed', f.id, f.title));
+          const errEl = fl.querySelector('.feed-err');
+          if (errEl) errEl.addEventListener('click', e => { e.stopPropagation(); openFeedDiag(f); });
+          feedUl.appendChild(fl);
+        }
+        subLi.appendChild(feedUl);
+        subUl.appendChild(subLi);
+
+        const sa = subRow.querySelector('.sub-arrow');
+        sa.addEventListener('click', e => {
+          e.stopPropagation();
+          if (!hasFeeds) return;
+          const opening = feedUl.hidden;
+          feedUl.hidden = !opening;
+          sa.textContent = opening ? '▾' : '▶';
+          if (opening) collapsed.delete('s' + sub.id); else collapsed.add('s' + sub.id);
+          localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...collapsed]));
+        });
+        subRow.addEventListener('click', () => window.selectScope('subject', sub.id, sub.name));
+      }
+      catLi.appendChild(subUl);
+      ul.appendChild(catLi);
+
+      const arrow = row.querySelector('.tree-arrow');
+      const label = row.querySelector('.tree-cat-label');
+      const toggle = e => {
+        e.stopPropagation();
+        const opening = subUl.hidden;
+        subUl.hidden = !opening;
+        arrow.textContent = opening ? '▾' : '▶';
+        if (opening) collapsed.delete('c' + cat.id); else collapsed.add('c' + cat.id);
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...collapsed]));
+      };
+      arrow.addEventListener('click', toggle);
+      label.addEventListener('click', () => window.selectScope('category', cat.id, cat.name));
+    }
+    treeEl.appendChild(ul);
+    highlightActive();
+  }
+
+  function highlightActive() {
+    const cur = window.CURRENT || {};
+    document.querySelectorAll('.quick-link, .tree-item-link, .tree-cat-row')
+      .forEach(el => el.classList.remove('active'));
+    let sel;
+    if (['all', 'unread', 'starred', 'read_later', 'flagged'].includes(cur.scope))
+      sel = document.querySelector(`.quick-link[data-scope="${cur.scope}"]`);
+    else
+      sel = document.querySelector(`[data-scope="${cur.scope}"][data-id="${cur.id}"]`);
+    if (sel) sel.classList.add('active');
+  }
+
+  // ── Refresh ───────────────────────────────────────────────────────────────
+  const refreshBtn = document.getElementById('btn-refresh');
+  const refreshGlyph = document.getElementById('refresh-glyph');
+  let refreshPoll = null;
+
+  refreshBtn.addEventListener('click', async () => {
+    await fetch('/api/refresh', { method: 'POST' });
+    startRefreshSpinner();
+  });
+
+  function startRefreshSpinner() {
+    refreshBtn.classList.add('is-spinning');
+    refreshGlyph.classList.add('spin');
+    renderStatus(true);
+    if (refreshPoll) clearInterval(refreshPoll);
+    refreshPoll = setInterval(async () => {
+      const s = await (await fetch('/api/refresh')).json();
+      if (s.last_run) { lastRefreshAt = s.last_run; lastSeenRun = s.last_run; }
+      if (!s.running) {
+        clearInterval(refreshPoll); refreshPoll = null;
+        refreshBtn.classList.remove('is-spinning');
+        refreshGlyph.classList.remove('spin');
+        renderStatus(false);
+        await loadTree();
+        if (typeof reloadItems === 'function') reloadItems();
+        checkWatchHits();
+
+      }
+    }, 1500);
+  }
+
+  // ── Status bar: last-refreshed time ─────────────────────────────────────────
+  let lastRefreshAt = null;
+  let lastSeenRun = null;   // last completed run we've already pulled into the view
+  const statusText = document.getElementById('status-refresh-text');
+  const statusItem = document.getElementById('status-refresh');
+
+  function relTime(iso) {
+    const secs = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (secs < 45) return 'just now';
+    if (secs < 3600) return Math.max(1, Math.round(secs / 60)) + ' min ago';
+    if (secs < 86400) return Math.round(secs / 3600) + ' h ago';
+    return new Date(iso).toLocaleString(undefined,
+      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderStatus(running) {
+    statusItem.classList.toggle('is-refreshing', !!running);
+    if (running) { statusText.textContent = 'Refreshing feeds…'; statusItem.title = 'Fetching the latest articles'; return; }
+    if (!lastRefreshAt) { statusText.textContent = 'Last refreshed: never'; return; }
+    statusText.textContent = 'Last refreshed ' + relTime(lastRefreshAt);
+    statusItem.title = 'Feeds last fetched ' + new Date(lastRefreshAt).toLocaleString();
+  }
+
+  async function pollStatus() {
+    try {
+      const s = await (await fetch('/api/refresh')).json();
+      if (s.last_run) lastRefreshAt = s.last_run;
+      renderStatus(s.running);
+      // Catch background auto-refreshes: when a new run has completed since we
+      // last looked, pull the fresh articles into the current view so they show
+      // up without a manual reload.
+      if (!s.running && s.last_run) {
+        if (lastSeenRun && s.last_run !== lastSeenRun) {
+          await loadTree();
+          if (typeof reloadItems === 'function') reloadItems();
+          checkWatchHits();
+        }
+        lastSeenRun = s.last_run;
+      }
+    } catch (e) { /* leave the last good value on screen */ }
+  }
+
+  pollStatus();                                   // initial value on load
+  setInterval(() => renderStatus(refreshBtn.classList.contains('is-spinning')), 20000);  // keep "x min ago" fresh
+  setInterval(pollStatus, 60000);                 // catch background auto-refreshes
+
+  // ── Feed diagnostic modal ───────────────────────────────────────────────────
+  const diagBackdrop = document.getElementById('diag-backdrop');
+  const diagFeed  = document.getElementById('diag-feed');
+  const diagError = document.getElementById('diag-error');
+  const diagMeta  = document.getElementById('diag-meta');
+  const diagHint  = document.getElementById('diag-hint');
+  const diagRetry = document.getElementById('diag-retry');
+  let   diagFeedObj = null;
+
+  function errorHint(msg) {
+    msg = (msg || '').toLowerCase();
+    if (msg.includes('404'))
+      return 'For YouTube, a 404 here almost always means this server is being rate-limited — YouTube ' +
+             'returns 404 (not 429) when throttling its RSS endpoint. It usually clears on its own; the app ' +
+             'now fetches YouTube feeds slowly to avoid it. Only if a channel keeps failing for days is it ' +
+             'likely actually removed — then remove and re-add it in ⚙ Settings.';
+    if (msg.includes('500') || msg.includes('502') || msg.includes('503'))
+      return 'A temporary server-side error on the source. This usually clears itself on the next refresh — ' +
+             'try “Retry now”.';
+    if (msg.includes('timed out') || msg.includes('timeout') || msg.includes('connection'))
+      return 'The source could not be reached. Check that it’s online and reachable from this server.';
+    return 'The last fetch of this feed failed. Try “Retry now”; if it keeps failing, check the source URL in ⚙ Settings.';
+  }
+
+  function renderDiag(f) {
+    diagFeed.innerHTML = `<strong>${escHtml(f.title)}</strong> · ${escHtml(f.type)}`;
+    diagError.textContent = f.last_error || '—';
+    diagMeta.textContent = f.last_fetched ? 'Last attempt ' + relTime(f.last_fetched) : 'Never fetched.';
+    diagHint.textContent = errorHint(f.last_error);
+  }
+
+  window.openFeedDiag = function (f) {
+    diagFeedObj = f;
+    renderDiag(f);
+    diagRetry.disabled = false; diagRetry.textContent = 'Retry now';
+    diagBackdrop.hidden = false;
+  };
+
+  diagRetry.addEventListener('click', async () => {
+    if (!diagFeedObj) return;
+    diagRetry.disabled = true; diagRetry.textContent = 'Retrying…';
+    let d;
+    try { d = await (await fetch(`/api/feeds/${diagFeedObj.id}/retry`, { method: 'POST' })).json(); }
+    catch { diagRetry.textContent = 'Retry failed'; diagRetry.disabled = false; return; }
+    await loadTree();                                  // reflect cleared/updated error in the sidebar
+    if (d.ok) {
+      diagError.textContent = '✓ Fetched successfully' + (d.added ? ` — ${d.added} new item(s).` : ' — no new items.');
+      diagHint.textContent = '';
+      diagMeta.textContent = d.last_fetched ? 'Last attempt ' + relTime(d.last_fetched) : '';
+      diagRetry.textContent = 'Done';
+    } else {
+      renderDiag({ ...diagFeedObj, last_error: d.last_error || d.error, last_fetched: d.last_fetched });
+      diagRetry.disabled = false; diagRetry.textContent = 'Retry now';
+    }
+  });
+
+  document.getElementById('diag-close').addEventListener('click', () => diagBackdrop.hidden = true);
+  diagBackdrop.addEventListener('click', e => { if (e.target === diagBackdrop) diagBackdrop.hidden = true; });
+
+  // ── Help modal ────────────────────────────────────────────────────────────
+  const hBackdrop = document.getElementById('help-backdrop');
+  document.getElementById('btn-help').addEventListener('click', () => hBackdrop.hidden = false);
+  document.getElementById('help-close').addEventListener('click', () => hBackdrop.hidden = true);
+  hBackdrop.addEventListener('click', e => { if (e.target === hBackdrop) hBackdrop.hidden = true; });
+
+  // ── Daily Brief modal ───────────────────────────────────────────────────────
+  const briefBackdrop = document.getElementById('brief-backdrop');
+  const briefStatus = document.getElementById('brief-status');
+  const briefContent = document.getElementById('brief-content');
+  const briefGenBtn = document.getElementById('brief-generate');
+
+  document.getElementById('btn-brief').addEventListener('click', () => { briefBackdrop.hidden = false; loadBrief(); });
+  document.getElementById('brief-close').addEventListener('click', () => briefBackdrop.hidden = true);
+  briefBackdrop.addEventListener('click', e => { if (e.target === briefBackdrop) briefBackdrop.hidden = true; });
+  briefGenBtn.addEventListener('click', generateBrief);
+
+  function fmtBriefTime(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleString(undefined,
+      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Tiny, safe Markdown → HTML (headings, bullets, bold, links) over escaped text.
+  function mdToHtml(md) {
+    const inline = s => escHtml(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(https?:\/\/[^\s)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    let html = '', inList = false;
+    const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+    for (const raw of (md || '').split('\n')) {
+      const line = raw.trimEnd();
+      let m;
+      if (!line.trim()) { closeList(); continue; }
+      if ((m = line.match(/^#{1,6}\s+(.*)/))) { closeList(); html += `<h4 class="brief-h">${inline(m[1])}</h4>`; }
+      else if ((m = line.match(/^\s*[-*•]\s+(.*)/))) {
+        if (!inList) { html += '<ul class="brief-ul">'; inList = true; }
+        html += `<li>${inline(m[1])}</li>`;
+      } else { closeList(); html += `<p>${inline(line)}</p>`; }
+    }
+    closeList();
+    return html;
+  }
+
+  function showBrief(b) {
+    briefContent.innerHTML = mdToHtml(b.content);
+    briefStatus.textContent = `From ${fmtBriefTime(b.created_at)} · ${b.item_count} articles`;
+  }
+
+  async function loadBrief() {
+    briefContent.innerHTML = ''; briefStatus.textContent = 'Loading…';
+    let d;
+    try { d = await (await fetch('/api/brief')).json(); }
+    catch { briefStatus.textContent = 'Could not load the brief.'; return; }
+    if (!d.has_api_key) {
+      briefGenBtn.hidden = true;
+      briefStatus.innerHTML = 'Add an Anthropic API key in ⚙ Settings → <strong>AI Daily Brief</strong> to enable this.';
+      return;
+    }
+    briefGenBtn.hidden = false;
+    if (d.brief) {
+      showBrief(d.brief);
+      briefGenBtn.textContent = d.brief.day === d.today ? 'Regenerate' : "Generate today's brief";
+    } else {
+      briefStatus.textContent = 'No brief generated yet.';
+      briefGenBtn.textContent = "Generate today's brief";
+    }
+  }
+
+  async function generateBrief() {
+    const prev = briefGenBtn.textContent;
+    briefGenBtn.disabled = true; briefGenBtn.textContent = 'Generating…';
+    briefStatus.textContent = 'Asking Claude to read the last 24 hours of news…';
+    let d;
+    try { d = await (await fetch('/api/brief', { method: 'POST' })).json(); }
+    catch { briefStatus.textContent = 'Request failed.'; briefGenBtn.disabled = false; briefGenBtn.textContent = prev; return; }
+    briefGenBtn.disabled = false;
+    if (d.error) { briefStatus.textContent = '✗ ' + d.error; briefGenBtn.textContent = prev; return; }
+    showBrief(d.brief);
+    briefGenBtn.textContent = 'Regenerate';
+  }
+
+  // ── Settings modal ──────────────────────────────────────────────────────────
+  const sBackdrop = document.getElementById('settings-backdrop');
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    sBackdrop.hidden = false; renderManage(); fillSubjectSelect(); loadSettings();
+  });
+
+  // Settings tabs
+  const settingsTabs = [...document.querySelectorAll('.settings-tab')];
+  const settingsPanels = [...document.querySelectorAll('.settings-panel')];
+  settingsTabs.forEach(tab => tab.addEventListener('click', () => {
+    settingsTabs.forEach(t => t.classList.toggle('is-active', t === tab));
+    settingsPanels.forEach(p => p.hidden = p.dataset.panel !== tab.dataset.tab);
+    if (tab.dataset.tab === 'health') loadHealth();
+  }));
+
+  // ── Feed health dashboard ─────────────────────────────────────────────────────
+  const healthList = document.getElementById('health-list');
+  const healthSummary = document.getElementById('health-summary');
+  document.getElementById('health-refresh').addEventListener('click', loadHealth);
+
+  async function loadHealth() {
+    healthSummary.textContent = 'Loading…';
+    healthList.innerHTML = '';
+    let d;
+    try { d = await (await fetch('/api/feeds/health')).json(); }
+    catch { healthSummary.textContent = 'Could not load feed health.'; return; }
+    const s = d.summary, healthy = s.total - s.erroring;
+    healthSummary.innerHTML =
+      `<strong>${s.total}</strong> feeds · ` +
+      `<span style="color:var(--success)">${healthy} ok</span>` +
+      (s.erroring ? ` · <span style="color:var(--danger)">${s.erroring} with errors</span>` : '');
+    healthList.innerHTML = '';
+    d.feeds.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'health-row' + (f.last_error ? ' is-err' : '');
+      const when = f.last_fetched ? relTime(f.last_fetched) : 'never';
+      row.innerHTML =
+        `<span class="health-dot"></span>
+         <div class="health-main">
+           <div class="health-title">${typeIcon(f.type)} ${escHtml(f.title)}</div>
+           <div class="health-sub">${escHtml(f.category)} ▸ ${escHtml(f.subject)} · ${f.items} item${f.items === 1 ? '' : 's'} · fetched ${when}</div>
+           ${f.last_error ? `<div class="health-err">⚠ ${escHtml(f.last_error)}</div>` : ''}
+         </div>
+         <button class="btn-xs health-retry" data-id="${f.id}">Retry</button>`;
+      row.querySelector('.health-retry').addEventListener('click', async e => {
+        const btn = e.currentTarget;
+        btn.disabled = true; btn.textContent = '…';
+        try { await fetch(`/api/feeds/${f.id}/retry`, { method: 'POST' }); } catch { /* ignore */ }
+        await loadTree();
+        loadHealth();
+      });
+      healthList.appendChild(row);
+    });
+  }
+
+  // Hide-Shorts toggle
+  async function loadSettings() {
+    const s = await (await fetch('/api/settings')).json();
+    document.getElementById('hide-shorts-cb').checked = !!s.hide_shorts;
+    document.getElementById('refresh-interval').value = String(s.refresh_minutes || 30);
+    document.getElementById('watchlist-input').value = (s.watchlist || []).join('\n');
+    syncNotifyUI();
+    syncApiKeyUI(s);
+  }
+
+  function syncApiKeyUI(s) {
+    const input = document.getElementById('api-key-input');
+    const save = document.getElementById('api-key-save');
+    const status = document.getElementById('api-key-status');
+    const clearBtn = document.getElementById('api-key-clear');
+    input.value = '';
+    if (s.api_key_env) {
+      input.disabled = save.disabled = true;
+      input.placeholder = 'Set via ANTHROPIC_API_KEY environment variable';
+      status.textContent = '✓ Using key from the environment.';
+      clearBtn.hidden = true;
+    } else {
+      input.disabled = save.disabled = false;
+      input.placeholder = 'sk-ant-…';
+      status.textContent = s.has_api_key ? '✓ Key saved.' : 'No key set.';
+      clearBtn.hidden = !s.has_api_key;
+    }
+  }
+  document.getElementById('api-key-save').addEventListener('click', async () => {
+    const input = document.getElementById('api-key-input');
+    const v = input.value.trim();
+    if (!v) return;
+    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anthropic_api_key: v }) });
+    loadSettings();
+  });
+  document.getElementById('api-key-clear').addEventListener('click', async () => {
+    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear_api_key: true }) });
+    loadSettings();
+  });
+  document.getElementById('hide-shorts-cb').addEventListener('change', async e => {
+    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hide_shorts: e.target.checked }) });
+    await loadTree();
+    if (typeof reloadItems === 'function') reloadItems();
+  });
+  document.getElementById('refresh-interval').addEventListener('change', async e => {
+    await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_minutes: Number(e.target.value) }) });
+  });
+  document.getElementById('watchlist-save').addEventListener('click', async () => {
+    const status = document.getElementById('watchlist-status');
+    const terms = document.getElementById('watchlist-input').value;
+    const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ watchlist: terms }) });
+    if (!r.ok) { status.textContent = '✗ ' + ((await r.json()).error || 'Error'); return; }
+    status.textContent = '✓ Saved';
+    setTimeout(() => { status.textContent = ''; }, 2000);
+    if (typeof window.reloadWatchlist === 'function') window.reloadWatchlist();
+  });
+
+  // ── Desktop notifications for watchlist hits ────────────────────────────────
+  const NOTIFY_KEY = 'ctnhub-notify';
+  const SINCE_KEY = 'ctnhub-watch-since';
+  const notifyCb = document.getElementById('notify-cb');
+  const notifyStatus = document.getElementById('notify-status');
+  let notifyTimer = null;
+
+  function notifySupported() { return 'Notification' in window; }
+  function notifyEnabled() {
+    return localStorage.getItem(NOTIFY_KEY) === '1' &&
+           notifySupported() && Notification.permission === 'granted';
+  }
+
+  function syncNotifyUI() {
+    notifyCb.checked = notifyEnabled();
+    notifyCb.disabled = !notifySupported();
+    notifyStatus.textContent = !notifySupported()
+      ? 'Not supported in this browser.'
+      : (Notification.permission === 'denied' ? 'Blocked — allow notifications in your browser settings.'
+        : (notifyEnabled() ? '✓ On' : ''));
+  }
+
+  // Move the cursor to the newest item so we only notify on what arrives later.
+  async function initWatchCursor() {
+    try {
+      const d = await (await fetch('/api/watch-hits?since=0')).json();
+      localStorage.setItem(SINCE_KEY, String(d.max_id || 0));
+    } catch { /* leave cursor as-is */ }
+  }
+
+  async function checkWatchHits() {
+    if (!notifyEnabled()) return;
+    const since = Number(localStorage.getItem(SINCE_KEY) || 0);
+    let d;
+    try { d = await (await fetch('/api/watch-hits?since=' + since)).json(); }
+    catch { return; }
+    localStorage.setItem(SINCE_KEY, String(d.max_id || since));
+    const items = d.items || [];
+    if (since === 0 || !items.length) return;   // since 0 means uninitialised — don't dump backlog
+    items.slice(0, 5).forEach(it => {
+      const n = new Notification('👁 ' + (it.feed_title || 'Watchlist hit'), {
+        body: it.title, tag: 'ctnhub-' + it.id });
+      n.onclick = () => { window.open(it.url, '_blank', 'noopener'); n.close(); };
+    });
+    if (items.length > 5)
+      new Notification('CyberNewsHub', { body: `+${items.length - 5} more watchlist matches` });
+  }
+  window.checkWatchHits = checkWatchHits;
+
+  function startNotifyPolling() {
+    if (notifyTimer) clearInterval(notifyTimer);
+    notifyTimer = setInterval(checkWatchHits, 60000);
+  }
+
+  notifyCb.addEventListener('change', async e => {
+    if (e.target.checked) {
+      let perm = notifySupported() ? Notification.permission : 'denied';
+      if (perm === 'default') perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        localStorage.setItem(NOTIFY_KEY, '1');
+        await initWatchCursor();
+        startNotifyPolling();
+      } else {
+        localStorage.setItem(NOTIFY_KEY, '0');
+      }
+    } else {
+      localStorage.setItem(NOTIFY_KEY, '0');
+      if (notifyTimer) { clearInterval(notifyTimer); notifyTimer = null; }
+    }
+    syncNotifyUI();
+  });
+
+  if (notifyEnabled()) startNotifyPolling();
+  document.getElementById('settings-close').addEventListener('click', () => sBackdrop.hidden = true);
+  sBackdrop.addEventListener('click', e => { if (e.target === sBackdrop) sBackdrop.hidden = true; });
+
+  // Add feed: detect then add
+  const afUrl = document.getElementById('addfeed-url');
+  const afDetail = document.getElementById('addfeed-detail');
+  const afErr = document.getElementById('addfeed-error');
+  let detected = null;
+
+  document.getElementById('addfeed-detect').addEventListener('click', detectFeed);
+  afUrl.addEventListener('keydown', e => { if (e.key === 'Enter') detectFeed(); });
+
+  async function detectFeed() {
+    const url = afUrl.value.trim();
+    afErr.hidden = true; afDetail.hidden = true;
+    if (!url) return;
+    document.getElementById('addfeed-detect').textContent = 'Detecting…';
+    const d = await (await fetch('/api/discover', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }) })).json();
+    document.getElementById('addfeed-detect').textContent = 'Detect';
+    if (d.error) { afErr.textContent = d.error; afErr.hidden = false; return; }
+    detected = d;
+    document.getElementById('addfeed-type').textContent =
+      (d.type === 'youtube' ? '📺 YouTube channel' : '📰 RSS / Atom feed') + ' detected';
+    document.getElementById('addfeed-title').value = d.title || '';
+    fillSubjectSelect();
+    afDetail.hidden = false;
+  }
+
+  document.getElementById('addfeed-add').addEventListener('click', async () => {
+    const subject_id = document.getElementById('addfeed-subject').value;
+    if (!subject_id) { afErr.textContent = 'Create a category & subject first.'; afErr.hidden = false; return; }
+    const r = await fetch('/api/feeds', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: detected ? detected.feed_url : afUrl.value.trim(),
+        title: document.getElementById('addfeed-title').value.trim(),
+        subject_id: Number(subject_id),
+      }) });
+    const d = await r.json();
+    if (!r.ok) { afErr.textContent = d.error || 'Error'; afErr.hidden = false; return; }
+    afUrl.value = ''; afDetail.hidden = true; detected = null;
+    await loadTree(); renderManage(); fillSubjectSelect();
+    if (typeof reloadItems === 'function') reloadItems();
+  });
+
+  function fillSubjectSelect() {
+    const sel = document.getElementById('addfeed-subject');
+    const prev = sel.value;
+    sel.innerHTML = '';
+    for (const c of TREE.tree) for (const s of c.subjects) {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = `${c.name} ▸ ${s.name}`;
+      sel.appendChild(o);
+    }
+    if (prev) sel.value = prev;
+  }
+
+  // ── Manage categories / subjects / feeds ─────────────────────────────────────
+  function renderManage() {
+    const root = document.getElementById('manage-list');
+    root.innerHTML = '';
+    if (!TREE.tree.length) {
+      root.innerHTML = '<p class="settings-desc">No categories yet — add one below.</p>';
+      return;
+    }
+    for (const cat of TREE.tree) {
+      const box = document.createElement('div');
+      box.className = 'manage-cat';
+      box.innerHTML =
+        `<div class="manage-cat-head">
+           <span class="name">${escHtml(cat.name)}</span>
+           <div class="manage-actions">
+             <button class="btn-xs" data-act="cat-rename" data-id="${cat.id}" data-name="${escHtml(cat.name)}">Rename</button>
+             <button class="btn-xs btn-danger-xs" data-act="cat-del" data-id="${cat.id}" data-name="${escHtml(cat.name)}">Delete</button>
+           </div>
+         </div>`;
+      for (const sub of cat.subjects) {
+        const sd = document.createElement('div');
+        sd.className = 'manage-sub';
+        let feeds = sub.feeds.map(f =>
+          `<div class="manage-feed">
+             <span class="feed-type-icon">${typeIcon(f.type)}</span>
+             <span class="name">${escHtml(f.title)}</span>
+             <select class="move-select" data-move-feed="${f.id}" title="Move to another subject">${subjectOptions(sub.id)}</select>
+             <div class="manage-actions">
+               <button class="btn-xs btn-danger-xs" data-act="feed-del" data-id="${f.id}" data-name="${escHtml(f.title)}">✕</button>
+             </div>
+           </div>`).join('');
+        sd.innerHTML =
+          `<div class="manage-sub-head">
+             <span class="name">${escHtml(sub.name)}</span>
+             <select class="move-select" data-move-sub="${sub.id}" title="Move to another category">${categoryOptions(cat.id)}</select>
+             <div class="manage-actions">
+               <button class="btn-xs" data-act="sub-rename" data-id="${sub.id}" data-name="${escHtml(sub.name)}">Rename</button>
+               <button class="btn-xs btn-danger-xs" data-act="sub-del" data-id="${sub.id}" data-name="${escHtml(sub.name)}">Delete</button>
+             </div>
+           </div>${feeds}`;
+        box.appendChild(sd);
+      }
+      const addSub = document.createElement('div');
+      addSub.className = 'manage-sub';
+      addSub.innerHTML =
+        `<div class="addfeed-row" style="padding-left:8px">
+           <input type="text" class="modal-input" placeholder="New subject" data-newsub="${cat.id}">
+           <button class="btn-xs" data-act="sub-add" data-id="${cat.id}">Add subject</button>
+         </div>`;
+      box.appendChild(addSub);
+      root.appendChild(box);
+    }
+    root.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', onManageAction));
+    root.querySelectorAll('[data-move-feed]').forEach(sel => sel.addEventListener('change', () => moveFeed(sel)));
+    root.querySelectorAll('[data-move-sub]').forEach(sel => sel.addEventListener('change', () => moveSubject(sel)));
+  }
+
+  // Build <option> lists for the move dropdowns from the current tree.
+  function subjectOptions(selectedId) {
+    let out = '';
+    for (const c of TREE.tree) for (const s of c.subjects)
+      out += `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>` +
+             `${escHtml(c.name)} ▸ ${escHtml(s.name)}</option>`;
+    return out;
+  }
+  function categoryOptions(selectedId) {
+    return TREE.tree.map(c =>
+      `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('');
+  }
+
+  async function moveFeed(sel) {
+    await fetch('/api/feeds/' + sel.dataset.moveFeed, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject_id: Number(sel.value) }) });
+    await loadTree(); renderManage(); fillSubjectSelect();
+    if (typeof reloadItems === 'function') reloadItems();
+  }
+
+  async function moveSubject(sel) {
+    const r = await fetch('/api/subjects/' + sel.dataset.moveSub, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category_id: Number(sel.value) }) });
+    if (!r.ok) await alertDialog({ title: 'Error', message: (await r.json()).error || 'Something went wrong.' });
+    await loadTree(); renderManage(); fillSubjectSelect();
+    if (typeof reloadItems === 'function') reloadItems();
+  }
+
+  async function onManageAction(e) {
+    const b = e.currentTarget, act = b.dataset.act, id = b.dataset.id, name = b.dataset.name;
+    const refresh = async () => { await loadTree(); renderManage(); fillSubjectSelect();
+                                  if (typeof reloadItems === 'function') reloadItems(); };
+    if (act === 'cat-rename' || act === 'sub-rename') {
+      const kind = act === 'cat-rename' ? 'category' : 'subject';
+      const v = await promptDialog({ title: `Rename ${kind}`, message: 'Enter a new name:',
+        defaultValue: name, placeholder: 'New name', confirmLabel: 'Rename' });
+      if (v === null || !v.trim() || v.trim() === name) return;
+      const url = act === 'cat-rename' ? '/api/categories/' + id : '/api/subjects/' + id;
+      const r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: v.trim() }) });
+      if (!r.ok) await alertDialog({ title: 'Error', message: (await r.json()).error || 'Something went wrong.' });
+      else refresh();
+    } else if (act === 'cat-del') {
+      if (!await confirmDialog({ title: 'Delete category',
+        message: `Delete "${name}" and all its subjects, feeds and articles? This can't be undone.`,
+        confirmLabel: 'Delete', danger: true })) return;
+      await fetch('/api/categories/' + id, { method: 'DELETE' }); refresh();
+    } else if (act === 'sub-del') {
+      if (!await confirmDialog({ title: 'Delete subject',
+        message: `Delete "${name}" and its feeds and articles? This can't be undone.`,
+        confirmLabel: 'Delete', danger: true })) return;
+      await fetch('/api/subjects/' + id, { method: 'DELETE' }); refresh();
+    } else if (act === 'feed-del') {
+      if (!await confirmDialog({ title: 'Remove feed',
+        message: `Remove "${name}"? Its articles will be deleted too.`,
+        confirmLabel: 'Remove', danger: true })) return;
+      await fetch('/api/feeds/' + id, { method: 'DELETE' }); refresh();
+    } else if (act === 'sub-add') {
+      const inp = document.querySelector(`[data-newsub="${id}"]`);
+      const v = (inp.value || '').trim(); if (!v) return;
+      const r = await fetch('/api/subjects', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category_id: Number(id), name: v }) });
+      if (!r.ok) await alertDialog({ title: 'Error', message: (await r.json()).error || 'Something went wrong.' });
+      else refresh();
+    }
+  }
+
+  document.getElementById('newcat-add').addEventListener('click', async () => {
+    const inp = document.getElementById('newcat-name');
+    const v = (inp.value || '').trim(); if (!v) return;
+    const r = await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: v }) });
+    if (!r.ok) { await alertDialog({ title: 'Error', message: (await r.json()).error || 'Something went wrong.' }); return; }
+    inp.value = ''; await loadTree(); renderManage(); fillSubjectSelect();
+  });
+
+  // OPML import
+  document.getElementById('opml-file').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    const status = document.getElementById('opml-status');
+    status.textContent = 'Importing…';
+    const fd = new FormData(); fd.append('file', f);
+    const r = await fetch('/api/opml/import', { method: 'POST', body: fd });
+    const d = await r.json();
+    status.textContent = r.ok ? `✓ Added ${d.added} feeds — fetching…` : ('✗ ' + (d.error || 'Error'));
+    e.target.value = '';
+    if (r.ok) { await loadTree(); renderManage(); fillSubjectSelect(); startRefreshSpinner(); }
+  });
+
+  // Reset
+  document.getElementById('reset-open').addEventListener('click', () => {
+    document.getElementById('reset-confirm').hidden = false;
+    document.getElementById('reset-open').hidden = true;
+    document.getElementById('reset-input').focus();
+  });
+  document.getElementById('reset-go').addEventListener('click', async () => {
+    const status = document.getElementById('reset-status');
+    if (document.getElementById('reset-input').value.trim().toUpperCase() !== 'RESET') {
+      status.textContent = 'Type RESET to confirm.'; return;
+    }
+    await fetch('/api/reset', { method: 'POST' });
+    location.reload();
+  });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

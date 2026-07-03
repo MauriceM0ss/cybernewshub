@@ -1,0 +1,19 @@
+# CyberNewsHub — a personal news/RSS/YouTube aggregator.
+services:
+  ctnhub:
+    build: .
+    image: ctnhub:latest
+    container_name: ctnhub
+    restart: unless-stopped
+    ports:
+      - "8030:8080"          # http://localhost:8030
+    environment:
+      REFRESH_MINUTES: "30"  # how often all feeds auto-refresh
+      # AI Daily Brief — optional. Either set the key here (keep this file out of
+      # git / use an .env file), or leave it unset and paste the key in Settings.
+      # ANTHROPIC_API_KEY: "sk-ant-..."
+    volumes:
+      - ctnhub-data:/data
+
+volumes:
+  ctnhub-data:

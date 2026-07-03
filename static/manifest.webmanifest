@@ -1,0 +1,19 @@
+{
+  "name": "CyberNewsHub — Cybersecurity News",
+  "short_name": "CyberNewsHub",
+  "description": "Personal cybersecurity news, RSS & YouTube reader.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07090b",
+  "theme_color": "#07090b",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full-bleed background so the icon works as a maskable PWA icon. -->
+  <rect width="512" height="512" fill="#0e1114"/>
+  <!-- RSS / signal mark, centred within the maskable safe zone. -->
+  <g fill="none" stroke="#39ff14" stroke-width="32" stroke-linecap="round">
+    <path d="M150 292 a70 70 0 0 1 70 70"/>
+    <path d="M150 222 a140 140 0 0 1 140 140"/>
+  </g>
+  <circle cx="172" cy="340" r="26" fill="#39ff14"/>
+</svg>
