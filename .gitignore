@@ -7,3 +7,4 @@ venv/
 *.db
 *.key
 pin.json
+data/
