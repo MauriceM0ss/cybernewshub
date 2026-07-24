@@ -1,6 +1,10 @@
 __pycache__/
+.claude/
 *.pyc
-data/
-*.db
+venv/
 .venv/
 .pytest_cache/
+*.db
+*.key
+pin.json
+data/
