@@ -21,7 +21,7 @@
   <!-- PWA: installable, themed, home-screen icon -->
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
-  <meta name="theme-color" content="#07090b">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CyberNewsHub">
@@ -31,17 +31,55 @@
   <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header class="site-header">
     <div class="header-left">
-      <button class="btn-icon btn-menu" id="btn-menu" aria-label="Toggle feed menu">☰</button>
+      <button class="btn-icon btn-menu" id="btn-menu" type="button" aria-label="Toggle feed menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
       <a href="/" class="logo">
         <span class="logo-text">CyberNewsHub</span>
       </a>
     </div>
     <span class="header-title">Cybersecurity News</span>
     <div class="header-actions">
-      <button class="btn-icon" id="btn-refresh" data-tip="Refresh all feeds now" aria-label="Refresh all feeds now"><span id="refresh-glyph">⟳</span></button>
-      <button class="btn-icon" id="btn-brief" data-tip="AI daily brief" aria-label="AI daily brief">✦</button>
-      <button class="btn-icon" id="btn-help" data-tip="Keyboard shortcuts &amp; help" aria-label="Keyboard shortcuts and help">?</button>
-      <button class="btn-icon" id="btn-settings" data-tip="Feeds &amp; settings" aria-label="Feeds and settings">⚙</button>
+      <button class="btn-icon" id="btn-refresh" type="button" data-tip="Refresh all feeds now"
+              aria-label="Refresh all feeds now">
+        <svg id="refresh-glyph" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+      <button class="btn-icon" id="btn-brief" type="button" data-tip="AI daily brief"
+              aria-label="AI daily brief" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"></path>
+          <line x1="19" y1="16" x2="19" y2="21"></line>
+          <line x1="16.5" y1="18.5" x2="21.5" y2="18.5"></line>
+        </svg>
+      </button>
+      <button class="btn-icon" id="btn-help" type="button" data-tip="Keyboard shortcuts &amp; help"
+              aria-label="Keyboard shortcuts and help" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </button>
+      <button class="btn-icon" id="btn-settings" type="button" data-tip="Feeds &amp; settings"
+              aria-label="Feeds and settings" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -53,6 +91,7 @@
       <div class="settings-tabs" role="tablist">
         <button class="settings-tab is-active" data-tab="sources" role="tab">Sources</button>
         <button class="settings-tab" data-tab="prefs" role="tab">Preferences</button>
+        <button class="settings-tab" data-tab="appearance" role="tab">Appearance</button>
         <button class="settings-tab" data-tab="health" role="tab">Health</button>
         <button class="settings-tab" data-tab="data" role="tab">Data</button>
       </div>
@@ -98,20 +137,6 @@
 
       <!-- ── Tab: Preferences ─────────────────────────────────────────────── -->
       <div class="settings-panel" data-panel="prefs" hidden>
-
-      <!-- Appearance -->
-      <div class="settings-section">
-        <h3 class="settings-section-title">Appearance</h3>
-        <label class="field">Theme
-          <select id="theme-select" class="modal-input">
-            <option value="neon">Neon — dark terminal</option>
-            <option value="blue">Classic — deep blue</option>
-            <option value="light">Light</option>
-          </select>
-        </label>
-        <p class="settings-desc">Switches the colour scheme instantly. Your choice is remembered in this
-          browser.</p>
-      </div>
 
       <!-- YouTube -->
       <div class="settings-section">
@@ -176,6 +201,24 @@
       </div>
 
       </div><!-- /Tab: Preferences -->
+
+      <!-- ── Tab: Appearance ──────────────────────────────────────────────── -->
+      <div class="settings-panel" data-panel="appearance" hidden>
+        <div class="settings-section">
+          <h3 class="settings-section-title">Appearance</h3>
+          <label class="field">Theme
+            <select id="theme-select" class="modal-input">
+              <option value="neon">Dark Terminal</option>
+              <option value="blue">Deep Blue</option>
+              <option value="light">Light</option>
+              <option value="github">GitHub</option>
+              <option value="amber">Amber</option>
+            </select>
+          </label>
+          <p class="settings-desc">Switches the colour scheme instantly. Your choice is remembered in this
+            browser.</p>
+        </div>
+      </div><!-- /Tab: Appearance -->
 
       <!-- ── Tab: Health ──────────────────────────────────────────────────── -->
       <div class="settings-panel" data-panel="health" hidden>
@@ -323,15 +366,20 @@
   // ── Theme switching ──────────────────────────────────────────────────────
   // The <head> applies the saved theme before paint; here we keep the picker in
   // sync, persist changes, and match the browser/PWA chrome colour to the theme.
+  // These mirror each theme's --header-bg, not --bg: the browser chrome sits
+  // directly above the top bar, which is black in every theme.
   const THEME_KEY = 'ctnhub-theme';
-  const THEME_BG = { neon: '#07090b', blue: '#05070e', light: '#eef1f6' };
+  const THEME_HEADER_BG = {
+    neon: '#000000', blue: '#000000', light: '#000000',
+    github: '#010409', amber: '#000000',
+  };
   function currentTheme() { return localStorage.getItem(THEME_KEY) || 'neon'; }
   function applyTheme(t) {
-    if (!THEME_BG[t]) t = 'neon';
+    if (!THEME_HEADER_BG[t]) t = 'neon';
     document.documentElement.setAttribute('data-theme', t);
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', THEME_BG[t]);
+    if (meta) meta.setAttribute('content', THEME_HEADER_BG[t]);
     const sel = document.getElementById('theme-select');
     if (sel) sel.value = t;
   }
@@ -1008,8 +1056,10 @@
   });
 
   if (notifyEnabled()) startNotifyPolling();
+  // Deliberately no click-outside-to-dismiss here, unlike the other modals: this
+  // one holds half-finished edits (a feed being added, an unsaved watchlist) and
+  // a stray click on the backdrop used to throw them away. Close button only.
   document.getElementById('settings-close').addEventListener('click', () => sBackdrop.hidden = true);
-  sBackdrop.addEventListener('click', e => { if (e.target === sBackdrop) sBackdrop.hidden = true; });
 
   // Add feed: detect then add
   const afUrl = document.getElementById('addfeed-url');
