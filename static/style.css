@@ -6,9 +6,15 @@ select { -webkit-appearance: none; appearance: none; }
 /* ── Theming ──────────────────────────────────────────────────────────────
    The whole UI is driven by these tokens. A theme is selected by the
    `data-theme` attribute on <html> (set early in base.html to avoid a flash,
-   and switchable from Settings → Preferences → Appearance).
+   and switchable from Settings → Appearance).
    `--on-accent` is the text colour placed on an accent-filled surface;
-   `--glow-*` are neon glows that collapse to `none` in the calmer themes. */
+   `--glow-*` are neon glows that collapse to `none` in the calmer themes.
+
+   The top bar is black in every theme, so what sits on it can't reuse the body
+   tokens — in the Light theme `--text` and `--accent` are near-black and would
+   vanish. The `--header-*` tokens are that bar's own palette: `--header-text`
+   for the wordmark, `--header-fg` for the subtitle, `--header-logo` for the
+   `>_` prompt and accented button states. */
 
 :root {
   /* Layout dimensions — independent of the colour theme. */
@@ -17,7 +23,7 @@ select { -webkit-appearance: none; appearance: none; }
   --statusbar-h: 26px;
 }
 
-/* ── Neon — dark terminal (default). Adapted from the Command Center app. ── */
+/* ── Dark Terminal (default). Adapted from the Command Center app. ── */
 :root, [data-theme="neon"] {
   --bg:          #07090b;          /* near-black */
   --surface:     #0e1114;          /* panels, cards, header, sidebar */
@@ -41,11 +47,16 @@ select { -webkit-appearance: none; appearance: none; }
   --sel-fg:      #fff;
   --radius:      6px;
   --shadow:      0 16px 50px rgba(0, 0, 0, .55);
+  --header-bg:     #000000;
+  --header-border: rgba(255, 255, 255, .14);
+  --header-text:   #e6edf2;          /* wordmark */
+  --header-fg:     #19f0ff;          /* subtitle */
+  --header-logo:   #39ff14;          /* >_ prompt */
   --font-mono:   "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-head:   "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* ── Classic — the original deep-blue dark theme. ── */
+/* ── Deep Blue — the original deep-blue dark theme. ── */
 [data-theme="blue"] {
   --bg:          #05070e;
   --surface:     #0a0f1d;
@@ -69,6 +80,11 @@ select { -webkit-appearance: none; appearance: none; }
   --sel-fg:      #fff;
   --radius:      10px;
   --shadow:      0 2px 16px rgba(0, 0, 0, .5);
+  --header-bg:     #000000;
+  --header-border: rgba(255, 255, 255, .14);
+  --header-text:   #d3ddf2;
+  --header-fg:     #8593b0;          /* --accent2 lifted; too dark on black */
+  --header-logo:   #60a5fa;
   --font-mono:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-head:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -97,6 +113,80 @@ select { -webkit-appearance: none; appearance: none; }
   --sel-fg:      #0b1220;
   --radius:      10px;
   --shadow:      0 6px 24px rgba(30, 41, 70, .12);
+  /* The bar stays black here too, so these are on-black tints — this theme's own
+     --text and --accent are far too dark to read against it. */
+  --header-bg:     #000000;
+  --header-border: rgba(255, 255, 255, .16);
+  --header-text:   #e8ecf3;
+  --header-fg:     #cbd5e1;
+  --header-logo:   #60a5fa;
+  --font-mono:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-head:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── GitHub — Primer dark. Ported from the MyHours app. ── */
+[data-theme="github"] {
+  --bg:          #0d1117;
+  --surface:     #161b22;
+  --surface2:    #21262d;
+  --border:      #30363d;
+  --text:        #e6edf3;
+  --muted:       #8b949e;
+  --accent:      #2f81f7;
+  --accent-hi:   #58a6ff;
+  --accent2:     #8b949e;          /* labels plain muted */
+  --accent-dim:  rgba(47, 129, 247, .15);
+  --accent-glow: rgba(47, 129, 247, .15);
+  --danger:      #f85149;
+  --danger-dim:  rgba(248, 81, 73, .15);
+  --success:     #2ea043;          /* GitHub green */
+  --star:        #e3b341;          /* Primer attention yellow */
+  --on-accent:   #ffffff;
+  --glow-logo:   none;
+  --glow-text:   none;
+  --sel-bg:      rgba(47, 129, 247, .30);
+  --sel-fg:      #ffffff;
+  --radius:      6px;
+  --shadow:      0 8px 24px rgba(1, 4, 9, .5);
+  --header-bg:     #010409;          /* Primer canvas.inset — near-black */
+  --header-border: #30363d;
+  --header-text:   #e6edf3;
+  --header-fg:     #8b949e;
+  --header-logo:   #58a6ff;
+  --font-mono:   ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-head:   -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+                 Helvetica, Arial, sans-serif;
+}
+
+/* ── Amber. Ported from the MyHours app. ── */
+[data-theme="amber"] {
+  --bg:          #0d0f14;
+  --surface:     #141820;
+  --surface2:    #1c2130;
+  --border:      #252d3d;
+  --text:        #dde3ef;
+  --muted:       #6b7794;
+  --accent:      #f59e0b;
+  --accent-hi:   #fbbf24;
+  --accent2:     #6b7794;          /* labels plain muted */
+  --accent-dim:  #3d2a00;
+  --accent-glow: rgba(245, 158, 11, .12);
+  --danger:      #ef4444;
+  --danger-dim:  #3b0f0f;
+  --success:     #22c55e;
+  --star:        #fbbf24;
+  --on-accent:   #000;
+  --glow-logo:   none;
+  --glow-text:   none;
+  --sel-bg:      rgba(245, 158, 11, .28);
+  --sel-fg:      #fff;
+  --radius:      10px;
+  --shadow:      0 2px 16px rgba(0, 0, 0, .5);
+  --header-bg:     #000000;
+  --header-border: rgba(255, 255, 255, .14);
+  --header-text:   #dde3ef;
+  --header-fg:     #f0b45f;
+  --header-logo:   #fbbf24;
   --font-mono:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-head:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -114,25 +204,26 @@ a { color: inherit; text-decoration: none; }
 ::selection { background: var(--sel-bg); color: var(--sel-fg); }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
+/* Black in every theme, Light included — see the --header-* note above. */
 .site-header {
   position: sticky; top: 0; z-index: 100;
   height: var(--header-h);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
   padding: 0 20px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
 }
-.logo { display: flex; align-items: center; gap: 9px; font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--text); letter-spacing: -.01em; }
+.logo { display: flex; align-items: center; gap: 9px; font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--header-text); letter-spacing: -.01em; }
 .logo::before {
-  content: ">_"; font-weight: 700; color: var(--accent);
+  content: ">_"; font-weight: 700; color: var(--header-logo);
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   text-shadow: var(--glow-logo);
 }
 .logo-icon { font-size: 1.25rem; }
 .header-title {
-  font-size: .68rem; font-weight: 600; color: var(--accent2);
+  font-size: .68rem; font-weight: 600; color: var(--header-fg);
   letter-spacing: .24em; text-transform: uppercase; justify-self: center;
 }
 .header-actions { display: flex; gap: 8px; justify-self: end; align-items: center; }
@@ -149,8 +240,23 @@ a { color: inherit; text-decoration: none; }
 }
 .btn-icon:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
 .btn-icon.is-spinning { color: var(--accent); border-color: var(--accent); }
-.btn-icon .spin { display: inline-block; animation: spin 1s linear infinite; }
+.btn-icon .spin { display: inline-block; transform-origin: 50% 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Top-bar buttons follow the SecAnalysis app: monochrome stroked SVG glyphs in
+   a chrome-free chip — no resting border, no accent outline on hover, and a
+   focus ring instead. The bordered .btn-icon above still serves the in-page
+   buttons (article preview header, etc.).
+   These sit on black whatever the theme, so the resting/hover tints are literal
+   on-black values rather than tokens: --muted and --text would put near-black
+   glyphs on a near-white chip in the Light theme. */
+.site-header .btn-icon { color: rgba(230, 237, 242, .62); border-color: transparent; }
+.site-header .btn-icon:hover { background: rgba(255, 255, 255, .1); color: #fff; border-color: transparent; }
+.site-header .btn-icon:focus-visible {
+  outline: none; border-color: var(--header-logo); box-shadow: 0 0 0 3px rgba(255, 255, 255, .14);
+}
+.site-header .btn-icon.is-spinning { color: var(--header-logo); border-color: transparent; }
+.site-header .btn-icon svg { display: block; }
 
 /* ── Tooltips ────────────────────────────────────────────────────────────── */
 /* Themed, anchored to the element, instead of the unreliable native title bubble. */
