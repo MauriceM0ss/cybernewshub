@@ -16,6 +16,7 @@
 <!-- Article preview (reader view) -->
 <div class="modal-backdrop" id="preview-backdrop" hidden>
   <div class="modal preview-modal" role="dialog" aria-modal="true">
+    <div class="preview-grip" id="preview-grip" title="Drag to resize the reader"></div>
     <div class="preview-head">
       <div class="preview-headtext">
         <h2 class="modal-title preview-title" id="preview-title"></h2>
@@ -338,6 +339,61 @@ async function openPreview(it, el) {
 function closePreview() { previewBackdrop.hidden = true; previewBody.innerHTML = ''; }
 document.getElementById('preview-close').addEventListener('click', closePreview);
 previewBackdrop.addEventListener('click', ev => { if (ev.target === previewBackdrop) closePreview(); });
+
+// ── Reader width ─────────────────────────────────────────────────────────────
+// Dragged by the grip on the reader's left edge and remembered per browser.
+//
+// The reader is centred in its backdrop, so moving the left edge left by X only
+// buys X of width on that side — the width has to grow by 2X for the edge to
+// stay glued to the pointer. Without the doubling the edge slides at half the
+// cursor's speed and the drag feels broken.
+// readerW is the width you asked for; what gets rendered is that clamped to the
+// window. Keeping the two apart means shrinking the window narrows the reader
+// without forgetting your choice — widen the window again and it comes back.
+const READER_W_KEY = 'ctnhub-reader-width';
+const READER_MIN = 640;
+const previewModal = previewBackdrop.querySelector('.preview-modal');
+const readerGrip = document.getElementById('preview-grip');
+let readerW = Number(localStorage.getItem(READER_W_KEY)) || 0;   // 0 = never set
+
+// Clamp order matters: the window cap goes last so a narrow window wins over
+// READER_MIN rather than leaving the reader wider than the screen.
+function applyReaderWidth() {
+  if (!readerW) return;             // untouched — leave the responsive CSS default
+  const w = Math.min(Math.max(readerW, READER_MIN), window.innerWidth - 40);
+  previewModal.style.setProperty('--reader-w', w + 'px');
+}
+applyReaderWidth();
+
+// The move/up listeners go on window, not on the grip: the pointer leaves a
+// 10px strip almost immediately, and binding them to the grip would end the
+// drag the moment it did. (setPointerCapture would also work, but it's silently
+// a no-op for synthetic pointer events, which makes the drag untestable.)
+readerGrip.addEventListener('pointerdown', ev => {
+  ev.preventDefault();                            // don't start a text selection
+  const startX = ev.clientX;
+  const startW = previewModal.getBoundingClientRect().width;
+  readerGrip.classList.add('is-dragging');
+  const onMove = e => {
+    readerW = startW + (startX - e.clientX) * 2;
+    applyReaderWidth();
+  };
+  const onUp = () => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    readerGrip.classList.remove('is-dragging');
+    // Settle on what actually rendered, so a drag past the window edge doesn't
+    // bank an absurd width for the next session.
+    readerW = previewModal.getBoundingClientRect().width;
+    try { localStorage.setItem(READER_W_KEY, String(Math.round(readerW))); } catch (e) {}
+  };
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);
+});
+
+window.addEventListener('resize', applyReaderWidth);
 
 // Search (debounced)
 let searchTimer = null;

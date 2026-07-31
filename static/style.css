@@ -393,9 +393,12 @@ a { color: inherit; text-decoration: none; }
 /* ── Main content ─────────────────────────────────────────────────────────── */
 .app-main { flex: 1; overflow-y: auto; padding: 24px 32px; }
 
+/* Toolbar and list both run the full width of the content pane and reflow with
+   the window — no centred reading column. They have to stay in step: capping
+   one and not the other leaves the toolbar floating over a wider list. */
 .feed-toolbar {
   display: flex; align-items: center; gap: 12px;
-  margin: 0 auto 20px; flex-wrap: wrap; max-width: 920px;
+  margin: 0 0 20px; flex-wrap: wrap; max-width: none;
 }
 .feed-title { font-family: var(--font-head); font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; margin-right: auto; }
 .feed-title .sub { display: block; font-size: .8rem; font-weight: 500; color: var(--muted); margin-top: 1px; }
@@ -409,7 +412,7 @@ a { color: inherit; text-decoration: none; }
 .search-box:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
 
 /* ── Article list ─────────────────────────────────────────────────────────── */
-.items-list { display: flex; flex-direction: column; gap: 12px; max-width: 920px; margin: 0 auto; }
+.items-list { display: flex; flex-direction: column; gap: 12px; max-width: none; margin: 0; }
 
 .article {
   display: grid;
@@ -537,10 +540,30 @@ a { color: inherit; text-decoration: none; }
 .app-dialog { max-width: 420px; gap: 14px; }
 .app-dialog-msg { color: var(--muted); font-size: .9rem; line-height: 1.55; word-break: break-word; }
 
-/* Article preview (reader view) */
+/* Article preview (reader view).
+
+   Width is draggable by the grip on the left edge and remembered across
+   sessions (--reader-w, set inline by the JS in feed.html). Until it's been
+   dragged the fallback applies, and the min() covers both orientations without
+   a media query: on a landscape monitor it settles at 1400px, on a portrait or
+   narrow window it collapses to the full available width. max-width re-clamps
+   it so a width saved on a wide screen can't overhang a smaller one. */
 .preview-modal {
-  max-width: 760px; height: calc(100vh - 40px); padding: 0; gap: 0; overflow: hidden;
+  position: relative;
+  width: var(--reader-w, min(1400px, calc(100vw - 40px)));
+  max-width: calc(100vw - 40px);
+  height: calc(100vh - 40px); padding: 0; gap: 0; overflow: hidden;
 }
+
+/* Resize grip. Left edge only: the right edge is where .preview-body's 9px
+   scrollbar lives, and a grip there would swallow every scroll drag. Kept
+   invisible until hovered so it doesn't compete with the article; the
+   ew-resize cursor is the affordance. */
+.preview-grip {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 10px; z-index: 2;
+  cursor: ew-resize; background: transparent; transition: background .15s;
+}
+.preview-grip:hover, .preview-grip.is-dragging { background: var(--accent-dim); }
 .preview-head {
   display: flex; align-items: flex-start; gap: 14px; justify-content: space-between;
   padding: 18px 22px; border-bottom: 1px solid var(--pane-rule); background: var(--surface);
