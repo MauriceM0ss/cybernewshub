@@ -1,5 +1,7 @@
 # CyberNewsHub
 
+![CyberNewsHub reading a fresh set of feeds, Dark Terminal theme](docs/screenshot.png)
+
 > ⚠️ **Disclaimer:** This is a Claude Code "vibe coding" project. It was built
 > iteratively with the [Claude Code](https://claude.com/claude-code) AI agent
 > and is intended for personal/experimental use. Review the code before relying
